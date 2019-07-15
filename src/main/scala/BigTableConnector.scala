@@ -32,7 +32,6 @@ object BigTableConnector {
         val message = "hello world"
         while (k<300){
           val rowKey = "key_example" + k
-                    // Put a single row into the table. We could also pass a list of Puts to write a batch.
                     val put = new Put(Bytes.toBytes(rowKey))
                     put.addColumn(COLUMN_FAMILY_NAME, COLUMN_NAME, Bytes.toBytes(message))
                     table.put(put)
@@ -72,7 +71,7 @@ object BigTableConnector {
 
         // Scan all rows.
         val scan = new Scan
-        print("Scan for all greetings:")
+        println("Scan for all greetings:")
         val scanner = table.getScanner(scan)
         import scala.collection.JavaConversions._
         for (row <- scanner) {
@@ -136,8 +135,7 @@ object BigTableConnector {
         val admin = connection.getAdmin
         val table = connection.getTable(TableName.valueOf(TABLE_NAME))
 
-        // Clean up by disabling and then deleting the table
-        print("Delete the table")
+        println("Delete the table")
         admin.disableTable(table.getName)
         admin.deleteTable(table.getName)
 
