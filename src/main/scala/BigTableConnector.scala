@@ -13,59 +13,64 @@ object BigTableConnector {
 
   import java.io.IOException
 
+  // java -jar  -Dbigtable.projectID=your_project_ID  -Dbigtable.instanceID=your_big_table_name BigTableConnector-assembly-0.1.jar
 
-  private val TABLE_NAME = Bytes.toBytes("Hello-Bigtable")
-  private val COLUMN_FAMILY_NAME = Bytes.toBytes("cf1")
-  private val COLUMN_NAME = Bytes.toBytes("greeting")
-
-  private val GREETINGS = Array("Hello World!", "Hello Cloud Bigtable!", "Hello HBase!")
+  private val TABLE_NAME = Bytes.toBytes("table_test")
+  private val COLUMN_FAMILY_NAME = Bytes.toBytes("family_test")
+  private val COLUMN_NAME = Bytes.toBytes("message")
 
 
-  /** Connects to Cloud Bigtable, runs some basic operations and prints the results. */
-  def doHelloWorld(projectId: String, instanceId: String): Unit = {
+  def writeToBigTable(projectId: String, instanceId: String): Unit = {
 
     try {
       val connection = BigtableConfiguration.connect(projectId, instanceId)
 
       try {
-        val admin = connection.getAdmin
-
-        // Create a table with a single column family
-        val descriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME))
-        descriptor.addFamily(new HColumnDescriptor(COLUMN_FAMILY_NAME))
-        println("Create table " + descriptor.getNameAsString)
-
-//        admin.createTable(descriptor)
-        admin.createTable(descriptor)
-
-        // Retrieve the table we just created so we can do some reads and writes
         val table = connection.getTable(TableName.valueOf(TABLE_NAME))
 
-        // Write some rows to the table
-        var i = 0
-        while ( {
-          i < GREETINGS.length
-        }) {
-          val rowKey = "greeting" + i
-
-          // Put a single row into the table. We could also pass a list of Puts to write a batch.
-          val put = new Put(Bytes.toBytes(rowKey))
-          put.addColumn(COLUMN_FAMILY_NAME, COLUMN_NAME, Bytes.toBytes(GREETINGS(i)))
-          table.put(put)
-
-          {
-            i += 1; i - 1
-          }
+        var k = 0
+        val message = "hello world"
+        while (k<300){
+          val rowKey = "key_example" + k
+                    // Put a single row into the table. We could also pass a list of Puts to write a batch.
+                    val put = new Put(Bytes.toBytes(rowKey))
+                    put.addColumn(COLUMN_FAMILY_NAME, COLUMN_NAME, Bytes.toBytes(message))
+                    table.put(put)
+            k +=1
         }
+      } catch {
+        case e: IOException =>
+          System.err.println("Exception: " + e.getMessage)
+          e.printStackTrace()
+          System.exit(1)
+      } finally if (connection != null) connection.close()
+    } catch {
+      case e: IOException =>
+        System.err.println("Exception: " + e.getMessage)
+        e.printStackTrace()
+        System.exit(1)
+    }
 
-        // Get the first greeting by row key
-        val rowKey = "greeting0"
+    System.exit(0)
+  }
+
+
+  def readFromBigTable(projectId: String, instanceId: String): Unit = {
+
+    try {
+      val connection = BigtableConfiguration.connect(projectId, instanceId)
+
+      try {
+        val table = connection.getTable(TableName.valueOf(TABLE_NAME))
+
+        // Get a row by key
+        val rowKey = "key_example"
         val getResult = table.get(new Get(Bytes.toBytes(rowKey)))
         val greeting = Bytes.toString(getResult.getValue(COLUMN_FAMILY_NAME, COLUMN_NAME))
         System.out.println("Get a single greeting by row key")
         System.out.printf("\t%s = %s\n", rowKey, greeting)
 
-        // Now scan across all rows.
+        // Scan all rows.
         val scan = new Scan
         print("Scan for all greetings:")
         val scanner = table.getScanner(scan)
@@ -75,29 +80,92 @@ object BigTableConnector {
           System.out.println('\t' + Bytes.toString(valueBytes))
         }
 
-//        // Clean up by disabling and then deleting the table
-//        print("Delete the table")
-//        admin.disableTable(table.getName)
-//        admin.deleteTable(table.getName)
-      } catch {
+      }catch {
+            case e: IOException =>
+              System.err.println("Exception: " + e.getMessage)
+              e.printStackTrace()
+              System.exit(1)
+          } finally if (connection != null) connection.close()
+        } catch {
+          case e: IOException =>
+            System.err.println("Exception: " + e.getMessage)
+            e.printStackTrace()
+            System.exit(1)
+        }
+
+        System.exit(0)
+  }
+
+
+  def createTable(projectId: String, instanceId: String) : Unit = {
+    try {
+      val connection = BigtableConfiguration.connect(projectId, instanceId)
+
+      try {
+        val admin = connection.getAdmin
+
+        val descriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME))
+        descriptor.addFamily(new HColumnDescriptor(COLUMN_FAMILY_NAME))
+        println("Create table " + descriptor.getNameAsString)
+
+        admin.createTable(descriptor)
+
+      }catch {
         case e: IOException =>
-          System.err.println("Exception while running HelloWorld: " + e.getMessage)
+          System.err.println("Exception: " + e.getMessage)
           e.printStackTrace()
           System.exit(1)
       } finally if (connection != null) connection.close()
     } catch {
       case e: IOException =>
-        System.err.println("Exception while running HelloWorld: " + e.getMessage)
+        System.err.println("Exception: " + e.getMessage)
         e.printStackTrace()
         System.exit(1)
     }
+
     System.exit(0)
+
+  }
+
+
+  def deleteTable(projectId: String, instanceId: String) : Unit = {
+    try {
+      val connection = BigtableConfiguration.connect(projectId, instanceId)
+
+      try {
+        val admin = connection.getAdmin
+        val table = connection.getTable(TableName.valueOf(TABLE_NAME))
+
+        // Clean up by disabling and then deleting the table
+        print("Delete the table")
+        admin.disableTable(table.getName)
+        admin.deleteTable(table.getName)
+
+
+      }catch {
+        case e: IOException =>
+          System.err.println("Exception: " + e.getMessage)
+          e.printStackTrace()
+          System.exit(1)
+      } finally if (connection != null) connection.close()
+    } catch {
+      case e: IOException =>
+        System.err.println("Exception: " + e.getMessage)
+        e.printStackTrace()
+        System.exit(1)
+    }
+
+    System.exit(0)
+
   }
 
   def main(args: Array[String]): Unit = { // Consult system properties to get project/instance
-    val projectId = requiredProperty("flash-zenith-245106 ")
-    val instanceId = requiredProperty("bigtabletest")
-    doHelloWorld(projectId, instanceId)
+    val projectId = requiredProperty("bigtable.projectID")
+    val instanceId = requiredProperty("bigtable.instanceID")
+    createTable(projectId, instanceId)
+    writeToBigTable(projectId, instanceId)
+    readFromBigTable(projectId,instanceId)
+    deleteTable(projectId,instanceId)
   }
 
   private def requiredProperty(prop: String) = {
