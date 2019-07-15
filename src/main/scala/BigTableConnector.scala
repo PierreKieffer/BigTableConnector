@@ -157,7 +157,7 @@ object BigTableConnector {
 
   }
 
-  def main(args: Array[String]): Unit = { // Consult system properties to get project/instance
+  def main(args: Array[String]): Unit = {
     val projectId = requiredProperty("bigtable.projectID")
     val instanceId = requiredProperty("bigtable.instanceID")
     createTable(projectId, instanceId)
