@@ -71,7 +71,6 @@ object BigTableConnector {
 
         // Scan all rows.
         val scan = new Scan
-        println("Scan for all greetings:")
         val scanner = table.getScanner(scan)
         import scala.collection.JavaConversions._
         for (row <- scanner) {
